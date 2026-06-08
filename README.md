@@ -1,6 +1,62 @@
-# datai-gcp-foundation
+# datai-assessor-backend
 
-Template repository for datai project services. Provides Terraform infrastructure, GitHub Actions CI/CD, and GCP bootstrapping scripts for deploying into the shared `datai-core` GCP project with isolated dev/prod environments.
+FastAPI backend for the **datai Assessor** — a five-pillar data maturity assessment tool. The API accepts structured assessment input, computes per-pillar scores, generates recommendations, and (once integrated) returns an AI-powered executive summary via Vertex AI (Gemini).
+
+> **Backend only.** There is no frontend in this repository.
+
+---
+
+## Application structure
+
+```
+app/
+├── main.py      # FastAPI application instance and router registration
+├── api.py       # /api/v1/assess endpoint (APIRouter)
+├── models.py    # Pydantic request / response schemas for the five pillars
+└── services.py  # Business logic; Vertex AI and PDF integration stubs
+```
+
+### Five assessment pillars
+
+| # | Pillar |
+|---|--------|
+| 1 | Strategy & Leadership |
+| 2 | Data Management & Quality |
+| 3 | Technology & Architecture |
+| 4 | Analytics & Insights |
+| 5 | Governance & Compliance |
+
+### API endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/api/v1/assess` | Submit a five-pillar assessment and receive scores, recommendations, and an AI summary |
+| `GET` | `/health` | Liveness probe |
+
+---
+
+## Running locally
+
+```bash
+# 1. Create and activate a virtual environment
+python -m venv .venv
+source .venv/bin/activate   # Windows: .venv\Scripts\activate
+
+# 2. Install dependencies
+pip install -r requirements.txt
+
+# 3. Start the development server
+uvicorn app.main:app --reload
+```
+
+The API will be available at `http://localhost:8000`.  
+Interactive docs (Swagger UI): `http://localhost:8000/docs`
+
+---
+
+## GCP / infrastructure setup
+
+This repository was created from the **datai-gcp-foundation** template. The Terraform infrastructure, GitHub Actions CI/CD, and GCP bootstrapping scripts are documented below.
 
 ---
 
