@@ -77,12 +77,12 @@ async def generate_summary(request: AssessmentRequest, overall_score: float) -> 
     # In Cloud Run, GOOGLE_CLOUD_PROJECT is automatically injected. 
     # For local testing, ensure you have run `gcloud auth application-default login`
     project_id = os.getenv("GOOGLE_CLOUD_PROJECT", "datai-core")
-    location = "europe-west6"
+    location = "europe-west1" # Routes api calls through Belgium for model access
     
     vertexai.init(project=project_id, location=location)
     
     # We use Gemini 1.5 Flash for high speed and low latency
-    model = GenerativeModel("gemini-1.5-flash")
+    model = GenerativeModel("gemini-2.5-flash")
     
     # Construct the system context and user prompt
     prompt = f"""
