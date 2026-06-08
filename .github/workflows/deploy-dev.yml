@@ -50,12 +50,11 @@ jobs:
       working-directory: ./
       run: |
         # Construct the exact image path for DEV
-        IMAGE_PATH="${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/datai-apps-dev/assessor-api:${{ github.sha }}"
+        IMAGE_PATH="${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/datai-assessor-repo-dev/assessor-api:${{ github.sha }}"
         
         docker build -t $IMAGE_PATH .
         docker push $IMAGE_PATH
         
-        # Save the path to an environment variable for Terraform
         echo "API_IMAGE=$IMAGE_PATH" >> $GITHUB_ENV
 
     # Step 3: Plan the full infrastructure, injecting the new Docker image

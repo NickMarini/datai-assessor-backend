@@ -3,7 +3,7 @@
 locals {
   env = var.environment
   name = {
-    docker_repo = "datai-apps-${var.environment}"
+    docker_repo = "datai-assessor-repo-${var.environment}"
   }
 }
 

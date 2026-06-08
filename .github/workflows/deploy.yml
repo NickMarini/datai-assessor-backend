@@ -51,7 +51,7 @@ jobs:
       working-directory: ./
       run: |
         # Construct the exact image path for PROD
-        IMAGE_PATH="${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/datai-apps-prod/assessor-api:${{ github.sha }}"
+        IMAGE_PATH="${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/datai-assessor-repo-prod/assessor-api:${{ github.sha }}"
         
         docker build -t $IMAGE_PATH .
         docker push $IMAGE_PATH
