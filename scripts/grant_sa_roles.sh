@@ -19,7 +19,8 @@ set -e
 # 1. Configuration (must match setup_wif.sh)
 # ==============================================================================
 PROJECT_ID="datai-core"  # Update this to match the project used in setup_wif.sh
-SA_NAME="<SA_NAME>"  # Update this to match the SA_NAME used in setup_wif.sh (e.g., datai-website-deployer)
+REPO_NAME="datai-assessor-backend"  # Update this to match the repository name used in setup_wif.sh
+SA_NAME="${REPO_NAME}-deployer"   # Update this to match the SA_NAME
 SA_EMAIL="${SA_NAME}@${PROJECT_ID}.iam.gserviceaccount.com"
 
 # ==============================================================================
