@@ -19,3 +19,9 @@ variable "environment" {
     error_message = "Environment must be 'dev' or 'prod'."
   }
 }
+
+variable "api_image" {
+  description = "The Docker image to deploy to Cloud Run"
+  type        = string
+  default     = "us-docker.pkg.dev/cloudrun/container/hello" # Placeholder to solve the chicken-and-egg problem
+}

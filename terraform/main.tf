@@ -28,3 +28,37 @@ resource "google_artifact_registry_repository" "docker_repo" {
 
   depends_on = [google_project_service.services]
 }
+
+# 3. Create the Cloud Run API Service
+resource "google_cloud_run_v2_service" "api_service" {
+  name     = "datai-assessor-api-${local.env}"
+  location = var.region
+  ingress  = "INGRESS_TRAFFIC_ALL"
+
+  template {
+    containers {
+      image = var.api_image
+      
+      ports {
+        container_port = 8080
+      }
+      resources {
+        limits = {
+          cpu    = "1000m"
+          memory = "512Mi"
+        }
+      }
+    }
+  }
+
+  depends_on = [google_project_service.services]
+}
+
+# 4. Make it publicly accessible (so the frontend can hit the API)
+resource "google_cloud_run_v2_service_iam_member" "api_public_access" {
+  project  = google_cloud_run_v2_service.api_service.project
+  location = google_cloud_run_v2_service.api_service.location
+  name     = google_cloud_run_v2_service.api_service.name
+  role     = "roles/run.invoker"
+  member   = "allUsers"
+}

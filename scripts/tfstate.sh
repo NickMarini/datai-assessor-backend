@@ -14,7 +14,7 @@ REPO_NAME="datai-assessor-backend"   # Change this for each new repository
 
 # Standardized bucket naming convention
 BUCKET_NAME="datai-state-${PROJECT_ID}-${REPO_NAME}"
-SA_EMAIL="${REPO_NAME}-deployer@${PROJECT_ID}.iam.gserviceaccount.com"
+SA_EMAIL="${REPO_NAME}-deploy@${PROJECT_ID}.iam.gserviceaccount.com"
 
 echo "Checking storage bucket status for ${REPO_NAME}..."
 gcloud config set project "$PROJECT_ID"

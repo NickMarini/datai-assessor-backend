@@ -22,7 +22,7 @@ REPO_NAME="datai-assessor-backend"  # GitHub repository name
 
 # Derived variables
 GITHUB_REPO="${GITHUB_ORG}/${REPO_NAME}"
-SA_NAME="${REPO_NAME}-deployer"    # Unique service account per repo (e.g., datai-website-deployer)
+SA_NAME="${REPO_NAME}-deploy"    # Unique service account per repo (e.g., datai-website-deployer)
 POOL_NAME="github-pool"
 PROVIDER_NAME="github-provider"
 

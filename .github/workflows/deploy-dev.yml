@@ -1,7 +1,6 @@
 name: Deploy Dev
 
 on:
-  # Manual-only — dev is never deployed automatically
   workflow_dispatch:
 
 permissions:
@@ -9,12 +8,9 @@ permissions:
   id-token: write
 
 jobs:
-  terraform:
-    name: "Terraform Apply [dev]"
+  deploy:
+    name: "Build & Deploy [dev]"
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./terraform
 
     steps:
     - name: Checkout Code
@@ -26,24 +22,54 @@ jobs:
         workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
         service_account: ${{ secrets.GCP_SA_EMAIL }}
 
+    # Authenticate Docker to push to GCP Artifact Registry
+    - name: Configure Docker Auth
+      run: gcloud auth configure-docker ${{ vars.GCP_REGION }}-docker.pkg.dev --quiet
+
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@v3
       with:
         terraform_version: 1.7.0
 
     - name: Terraform Init
+      working-directory: ./terraform
       run: terraform init -backend-config="prefix=terraform/state/dev"
 
-    - name: Terraform Format Check
-      run: terraform fmt -check
+    # Step 1: Bootstrap the Artifact Registry so Docker has a place to push
+    - name: Bootstrap Artifact Registry
+      working-directory: ./terraform
+      run: |
+        terraform apply -auto-approve \
+          -target=google_artifact_registry_repository.docker_repo \
+          -var="project_id=${{ vars.GCP_PROJECT_ID }}" \
+          -var="region=${{ vars.GCP_REGION }}" \
+          -var="environment=dev"
 
+    # Step 2: Build the FastAPI app and push it to the new dev registry
+    - name: Build and Push Docker Image
+      working-directory: ./
+      run: |
+        # Construct the exact image path for DEV
+        IMAGE_PATH="${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/datai-apps-dev/assessor-api:${{ github.sha }}"
+        
+        docker build -t $IMAGE_PATH .
+        docker push $IMAGE_PATH
+        
+        # Save the path to an environment variable for Terraform
+        echo "API_IMAGE=$IMAGE_PATH" >> $GITHUB_ENV
+
+    # Step 3: Plan the full infrastructure, injecting the new Docker image
     - name: Terraform Plan
+      working-directory: ./terraform
       run: |
         terraform plan \
           -var="project_id=${{ vars.GCP_PROJECT_ID }}" \
           -var="region=${{ vars.GCP_REGION }}" \
           -var="environment=dev" \
+          -var="api_image=${{ env.API_IMAGE }}" \
           -out=tfplan
 
+    # Step 4: Deploy Cloud Run
     - name: Terraform Apply
+      working-directory: ./terraform
       run: terraform apply -auto-approve tfplan

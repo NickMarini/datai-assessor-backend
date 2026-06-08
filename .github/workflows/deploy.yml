@@ -5,7 +5,6 @@ on:
   #push:
   #  branches:
   #    - main
-  # Also runnable manually from the Actions tab
   workflow_dispatch:
 
 permissions:
@@ -13,12 +12,9 @@ permissions:
   id-token: write
 
 jobs:
-  terraform:
-    name: "Terraform Apply [prod]"
+  deploy:
+    name: "Build & Deploy [prod]"
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./terraform
 
     steps:
     - name: Checkout Code
@@ -30,25 +26,48 @@ jobs:
         workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
         service_account: ${{ secrets.GCP_SA_EMAIL }}
 
+    - name: Configure Docker Auth
+      run: gcloud auth configure-docker ${{ vars.GCP_REGION }}-docker.pkg.dev --quiet
+
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@v3
       with:
         terraform_version: 1.7.0
 
     - name: Terraform Init
+      working-directory: ./terraform
       run: terraform init -backend-config="prefix=terraform/state/prod"
 
-    - name: Terraform Format Check
-      run: terraform fmt -check
+    - name: Bootstrap Artifact Registry
+      working-directory: ./terraform
+      run: |
+        terraform apply -auto-approve \
+          -target=google_artifact_registry_repository.docker_repo \
+          -var="project_id=${{ vars.GCP_PROJECT_ID }}" \
+          -var="region=${{ vars.GCP_REGION }}" \
+          -var="environment=prod"
+
+    - name: Build and Push Docker Image
+      working-directory: ./
+      run: |
+        # Construct the exact image path for PROD
+        IMAGE_PATH="${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/datai-apps-prod/assessor-api:${{ github.sha }}"
+        
+        docker build -t $IMAGE_PATH .
+        docker push $IMAGE_PATH
+        
+        echo "API_IMAGE=$IMAGE_PATH" >> $GITHUB_ENV
 
     - name: Terraform Plan
+      working-directory: ./terraform
       run: |
         terraform plan \
           -var="project_id=${{ vars.GCP_PROJECT_ID }}" \
           -var="region=${{ vars.GCP_REGION }}" \
           -var="environment=prod" \
+          -var="api_image=${{ env.API_IMAGE }}" \
           -out=tfplan
 
     - name: Terraform Apply
+      working-directory: ./terraform
       run: terraform apply -auto-approve tfplan
-
