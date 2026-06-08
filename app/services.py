@@ -10,9 +10,9 @@ Vertex AI and PDF integrations are implemented.
 """
 from __future__ import annotations
 
+import os
 import vertexai
 from vertexai.generative_models import GenerativeModel
-import os
 
 
 from app.models import (
