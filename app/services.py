@@ -8,8 +8,12 @@ This module is the integration point for:
 All functions are stubbed out and return placeholder data until the
 Vertex AI and PDF integrations are implemented.
 """
-
 from __future__ import annotations
+
+import vertexai
+from vertexai.generative_models import GenerativeModel
+import os
+
 
 from app.models import (
     AssessmentRequest,
@@ -68,21 +72,45 @@ async def extract_text_from_document(document_url: str) -> str:  # noqa: ARG001
 # ---------------------------------------------------------------------------
 
 async def generate_summary(request: AssessmentRequest, overall_score: float) -> str:
-    """Generate an AI-powered executive summary using Vertex AI (Gemini).
-
-    TODO: Replace the stub with an actual call to the Vertex AI SDK:
-        from vertexai.generative_models import GenerativeModel
-        model = GenerativeModel("gemini-pro")
-        response = await model.generate_content_async(prompt)
-        return response.text
+    """Generate an AI-powered executive summary using Vertex AI (Gemini)."""
+    
+    # In Cloud Run, GOOGLE_CLOUD_PROJECT is automatically injected. 
+    # For local testing, ensure you have run `gcloud auth application-default login`
+    project_id = os.getenv("GOOGLE_CLOUD_PROJECT", "datai-core")
+    location = "europe-west6"
+    
+    vertexai.init(project=project_id, location=location)
+    
+    # We use Gemini 1.5 Flash for high speed and low latency
+    model = GenerativeModel("gemini-1.5-flash")
+    
+    # Construct the system context and user prompt
+    prompt = f"""
+    You are an expert Data & AI Management Consultant at the boutique firm 'datai'. 
+    You are evaluating a potential client organisation named: {request.organisation}.
+    
+    They just completed a Data & AI Maturity Assessment and scored an overall {overall_score:.1f}/10.
+    
+    Here is the breakdown of their 5 pillars:
+    1. Strategy & Leadership: {request.strategy_and_leadership.score}/10. Notes: {request.strategy_and_leadership.notes}
+    2. Data Management & Quality: {request.data_management_and_quality.score}/10. Notes: {request.data_management_and_quality.notes}
+    3. Technology & Architecture: {request.technology_and_architecture.score}/10. Notes: {request.technology_and_architecture.notes}
+    4. Analytics & Insights: {request.analytics_and_insights.score}/10. Notes: {request.analytics_and_insights.notes}
+    5. Governance & Compliance: {request.governance_and_compliance.score}/10. Notes: {request.governance_and_compliance.notes}
+    
+    Write a concise, professional, 2-paragraph executive summary tailored to this client. 
+    The first paragraph should assess their current state. 
+    The second paragraph should provide 2-3 high-level, actionable next steps to improve their capabilities.
+    Do not use markdown formatting like **bolding** as this will be parsed into a PDF later.
     """
-    return (
-        f"{request.organisation} achieved an overall data maturity score of "
-        f"{overall_score:.1f}/10 across the five assessment pillars. "
-        "A detailed AI-generated summary will be available once the Vertex AI "
-        "integration is complete."
-    )
-
+    
+    try:
+        # Generate the response asynchronously to keep the FastAPI server non-blocking
+        response = await model.generate_content_async(prompt)
+        return response.text.strip()
+    except Exception as e:
+        # Fallback error handling if the API fails
+        return f"Assessment complete (Score: {overall_score:.1f}/10). AI summary generation temporarily unavailable. Error: {str(e)}"
 
 # ---------------------------------------------------------------------------
 # Core assessment logic

@@ -13,7 +13,8 @@ resource "google_project_service" "services" {
     "run.googleapis.com",
     "artifactregistry.googleapis.com",
     "cloudbuild.googleapis.com",
-    "iam.googleapis.com"
+    "iam.googleapis.com",
+    "aiplatform.googleapis.com"
   ])
   service            = each.key
   disable_on_destroy = false
@@ -36,6 +37,8 @@ resource "google_cloud_run_v2_service" "api_service" {
   ingress  = "INGRESS_TRAFFIC_ALL"
 
   template {
+    # Attach the secure runtime identity
+    service_account = google_service_account.api_runtime_sa.email
     containers {
       image = var.api_image
       
@@ -61,4 +64,17 @@ resource "google_cloud_run_v2_service_iam_member" "api_public_access" {
   name     = google_cloud_run_v2_service.api_service.name
   role     = "roles/run.invoker"
   member   = "allUsers"
+}
+
+# 5. Create a dedicated Runtime Service Account for the API
+resource "google_service_account" "api_runtime_sa" {
+  account_id   = "assessor-api-sa-${local.env}"
+  display_name = "Runtime SA for Assessor API (${local.env})"
+}
+
+# 6. Grant Vertex AI access to the runtime SA
+resource "google_project_iam_member" "vertex_ai_user" {
+  project = var.project_id
+  role    = "roles/aiplatform.user"
+  member  = "serviceAccount:${google_service_account.api_runtime_sa.email}"
 }
